@@ -31,7 +31,7 @@ jobs:
             --output text
 
       - name: Delete Secret Immediately
-      run: |
-        aws secretsmanager delete-secret \
+        run: |
+          aws secretsmanager delete-secret \
           --secret-id test/postgres \
           --force-delete-without-recovery
