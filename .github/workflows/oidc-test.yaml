@@ -1,7 +1,7 @@
 name: OIDC-Test
 
 on:
-  workflow-dispatch:
+  workflow_dispatch:
 
 permissions:
   id-token: write
