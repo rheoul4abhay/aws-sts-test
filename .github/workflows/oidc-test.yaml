@@ -25,10 +25,15 @@ jobs:
         run: |
           aws --version
 
+      - name: Debug
+        run: |
+          echo "Repository=$GITHUB_REPOSITORY"
+          echo "Ref=$GITHUB_REF"
+
       - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
+          role-to-assume: arn:aws:iam::428890020190:role/github-actions-role
           aws-region: ap-south-1
           role-session-name: github-actions-debug
 
