@@ -31,7 +31,7 @@ jobs:
           echo "Ref=$GITHUB_REF"
 
       - name: Configure AWS Credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::428890020190:role/github-actions-role
           aws-region: ap-south-1
