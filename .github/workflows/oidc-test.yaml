@@ -22,3 +22,10 @@ jobs:
 
       - name: Verify Identity
         run: aws sts get-caller-identity
+
+      - name: Get Secret
+        run: |
+          aws secretsmanager get-secret-value \
+            --secret-id test/postgres \
+            --query SecretString \
+            --output text
