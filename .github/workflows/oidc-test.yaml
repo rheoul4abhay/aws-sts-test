@@ -1,4 +1,4 @@
-name: OIDC-Test-Debug
+name: OIDC Debug
 
 on:
   workflow_dispatch:
@@ -8,39 +8,69 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  oidc-test:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Print Repository Context
-        run: |
-          echo "Repository : $GITHUB_REPOSITORY"
-          echo "Branch Ref : $GITHUB_REF"
-          echo "Actor      : $GITHUB_ACTOR"
-
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Verify AWS CLI
-        run: |
-          aws --version
-
-      - name: Debug
+      - name: Show GitHub execution context
         run: |
           echo "Repository=$GITHUB_REPOSITORY"
           echo "Ref=$GITHUB_REF"
+          echo "Ref name=$GITHUB_REF_NAME"
+          echo "Event=$GITHUB_EVENT_NAME"
+          echo "Actor=$GITHUB_ACTOR"
 
-      - name: Configure AWS Credentials via OIDC
+      - name: Decode GitHub OIDC claims
+        shell: bash
+        run: |
+          RESPONSE=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")
+
+          TOKEN=$(echo "$RESPONSE" | jq -r '.value')
+
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "GitHub did not return an OIDC token"
+            echo "$RESPONSE"
+            exit 1
+          fi
+
+          PAYLOAD=$(echo "$TOKEN" | cut -d '.' -f2)
+
+          # Convert Base64URL to standard Base64.
+          PAYLOAD=$(echo "$PAYLOAD" | tr '_-' '/+')
+
+          # Add Base64 padding when necessary.
+          case $((${#PAYLOAD} % 4)) in
+            2) PAYLOAD="${PAYLOAD}==" ;;
+            3) PAYLOAD="${PAYLOAD}=" ;;
+          esac
+
+          echo "OIDC token claims:"
+          echo "$PAYLOAD" | base64 --decode | jq '{
+            iss,
+            aud,
+            sub,
+            repository,
+            repository_id,
+            repository_owner,
+            repository_owner_id,
+            ref,
+            environment,
+            event_name,
+            job_workflow_ref
+          }'
+
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::428890020190:role/github-actions-role
           aws-region: ap-south-1
-          role-session-name: github-actions-debug
+          role-session-name: github-oidc-test
+          retry-max-attempts: 3
 
-      - name: Verify Identity
-        run: |
-          aws sts get-caller-identity
-
-      - name: List S3 Buckets
-        run: |
-          aws s3 ls || true
+      - name: Verify assumed identity
+        run: aws sts get-caller-identity
