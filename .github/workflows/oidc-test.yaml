@@ -1,4 +1,4 @@
-name: OIDC-Test
+name: OIDC-Test-Debug
 
 on:
   workflow_dispatch:
@@ -10,14 +10,32 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials
+    steps:
+      - name: Print Repository Context
+        run: |
+          echo "Repository : $GITHUB_REPOSITORY"
+          echo "Branch Ref : $GITHUB_REF"
+          echo "Actor      : $GITHUB_ACTOR"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify AWS CLI
+        run: |
+          aws --version
+
+      - name: Configure AWS Credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE }}
           aws-region: ap-south-1
+          role-session-name: github-actions-debug
 
-      - name: Verify Identity Connection
-        run: aws sts get-caller-identity
+      - name: Verify Identity
+        run: |
+          aws sts get-caller-identity
+
+      - name: List S3 Buckets
+        run: |
+          aws s3 ls || true
